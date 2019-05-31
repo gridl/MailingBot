@@ -1,4 +1,4 @@
-# Mailing Bot v0.1
+# Mailing Bot v0.3
 # Author: OverNull Team || eBind Group
 # Web-Site: overnull.ru
 
