@@ -1,67 +1,69 @@
 #!/usr/bin/python
 
+"""
+ overnull.ru
+ github.com/eBind
+
+ run:
+  python3 mbot.py --server smtp.smtp.ru --port 587 --user noreply@site.ru --mails emails.txt --text mail.txt --tls 0
+"""
+
 import sys
 import os
 import smtplib
 import getpass
+import optparse
 
-datafile = open('data.txt')
-data = datafile.read()
-opendata = 'n'
+def cmd_clear():
+    if sys.platform == "win32":
+        os.system("cls")
+    else:
+        os.system("clear")
 
-if "saved" in data:
-	opendata = raw_input('Open saved data? [Y/n]: ')
+def create_parser():
+    parser = optparse.OptionParser()
 
-if opendata.lower() != 'y':
-    smtp_server = raw_input('SMTP server: ')
-    port = raw_input('Server port: ')
-    user = raw_input('SMTP user: ')
-    passwd = getpass.getpass('Password: ')
-    saveinfo = raw_input('Save data? [Y/n]: ')
-    if saveinfo.lower() == 'y':
-    	datafile.close()
-        datafile = open('data.txt', 'w+')
-    	datafile.write(smtp_server + '\n' + port + '\n' + user + '\nsaved')
-        print('\nData successfully saved!')
-else:
-	print('Opening...')
-	lns = data.splitlines()
-	smtp_server = lns[0]
-	port = lns[1]
-	user = lns[2]
-	passwd = getpass.getpass('\nPassword from ' + user + ': ')
-	
-	
-subject = raw_input('\nSubject mails: ') 
-counts = raw_input('Count mails for one user(default: 1): ')
-if counts == 0 or counts == '' or '-' in counts:
-	counts = 1
+    parser.add_option('-s', '--server', dest='server', type='string', help='SMTP Server')
+    parser.add_option('-p', '--port', dest='port', default=587, type='int', help='SMTP Port')
+    parser.add_option('-u', '--user', dest='user', type='string', help='SMTP Username')
+    parser.add_option('-m', '--mails', dest='mails', type='string', help='Emails file path')
+    parser.add_option('-t', '--text', dest='text', type='string', help='Text-mail file path')
+    parser.add_option('-e', '--tls', dest='encrypt', default=0, type='int', help='TLS Encrypt, 1 or 0')
 
-try:
-    server = smtplib.SMTP(smtp_server,port) 
-    server.ehlo()
-    if smtp_server == "smtp.gmail.com":
-            server.starttls()
-    server.login(user,passwd)
-    
-    lines = open('emails.txt').read().splitlines()
-    body = open('text_mail.txt').read()
-    
-    for i in lines:
-    	b = 0
-    	while b < int(counts):
-    	    b = b + 1
-            msg = 'From: ' + user + '\nSubject: ' + subject + '\n' + body
-            server.sendmail(user,i,msg)
-            print "Email sent to: " + i + " number " + str(b)
-            sys.stdout.flush()
-        
-    server.quit()
-    
-    print '\nDone!'
-except KeyboardInterrupt:
-    print '[-] Canceled'
-    sys.exit()
-except smtplib.SMTPAuthenticationError:
-    print '\n[!] Wrong login or password.'
-    sys.exit()
+    (options, args) = parser.parse_args()
+
+    return options
+
+def sending_mail(data, subject, smtp_connect):
+    mails = open(data.mails, 'r').read().splitlines()
+    text = open(data.text, 'r').read()
+
+    for mail in mails:
+        smtp_connect.sendmail(data.user, mail, text)
+        print("Mail sent to " + mail)
+
+    print("[+] Done!")
+
+
+def main():
+    options = create_parser()
+
+    if options.server and options.user and options.mails and options.text:
+        try:
+            passwd = getpass.getpass("Password: ")
+            subject = input("Subject: ")
+
+            connect = smtplib.SMTP(options.server, options.port)
+
+            if options.encrypt == 1:
+                connect.starttls()
+
+            connect.login(options.user, passwd)
+            sending_mail(options, subject, connect)
+        except:
+            print("[~] Fatal error!")
+            sys.exit()
+    else:
+        print("[~] Using: mbot.py --server smtp.smtp.ru --port 587 --user noreply@site.ru --mails emails.txt --text mail.txt --tls 0")
+
+main()
